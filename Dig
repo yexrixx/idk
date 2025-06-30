@@ -1,0 +1,525 @@
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
+
+local Window = Rayfield:CreateWindow({
+   Name = "Digging.",
+   Icon = 0, -- Icon in Topbar. Can use Lucide Icons (string) or Roblox Image (number). 0 to use no icon (default).
+   LoadingTitle = "Dig from Dig Development.",
+   LoadingSubtitle = "from silent.999 and corpsec",
+   ShowText = "Open/Close", -- for mobile users to unhide rayfield, change if you'd like
+   Theme = "Amethyst", -- Check https://docs.sirius.menu/rayfield/configuration/themes
+
+   ToggleUIKeybind = "v", -- The keybind to toggle the UI visibility (string like "K" or Enum.KeyCode)
+
+   DisableRayfieldPrompts = false,
+   DisableBuildWarnings = false, -- Prevents Rayfield from warning when the script has a version mismatch with the interface
+
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = nil, -- Create a custom folder for your hub/game
+      FileName = "Big Hub"
+   },
+
+   Discord = {
+      Enabled = false, -- Prompt the user to join your Discord server if their executor supports it
+      Invite = "noinvitelink", -- The Discord invite code, do not include discord.gg/. E.g. discord.gg/ ABCD would be ABCD
+      RememberJoins = true -- Set this to false to make them join the discord every time they load it up
+   },
+
+   KeySystem = false, -- Set this to true to use our key system
+   KeySettings = {
+      Title = "Untitled",
+      Subtitle = "Key System",
+      Note = "No method of obtaining the key is provided", -- Use this to tell the user how to get a key
+      FileName = "Key", -- It is recommended to use something unique as other scripts using Rayfield may overwrite your key file
+      SaveKey = true, -- The user's key will be saved, but if you change the key, they will be unable to use your script
+      GrabKeyFromSite = false, -- If this is true, set Key below to the RAW site you would like Rayfield to get the key from
+      Key = {"Hello"} -- List of keys that will be accepted by the system, can be RAW file links (pastebin, github etc) or simple strings ("hello","key22")
+   }
+})
+
+-- Main
+local Tab = Window:CreateTab("Main.", "rewind") -- Title, Image
+local Section = Tab:CreateSection("Basic.")
+
+local Button = Tab:CreateButton({
+   Name = "Fly (X).",
+   Callback = function()
+   local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+
+local plr = Players.LocalPlayer
+local flying = false
+local speed = 200
+local bodyGyro, bodyVelocity
+
+function startFly()
+    local char = plr.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+
+    bodyGyro = Instance.new("BodyGyro", char.HumanoidRootPart)
+    bodyVelocity = Instance.new("BodyVelocity", char.HumanoidRootPart)
+    bodyGyro.P = 9e4
+    bodyGyro.maxTorque = Vector3.new(9e9, 9e9, 9e9)
+    bodyGyro.cframe = char.HumanoidRootPart.CFrame
+    bodyVelocity.velocity = Vector3.new(0,0,0)
+    bodyVelocity.maxForce = Vector3.new(9e9, 9e9, 9e9)
+
+    flying = true
+
+    -- Flugsteuerung (WASD)
+    local function flyLoop()
+        while flying and char and char:FindFirstChild("HumanoidRootPart") do
+            local vel = Vector3.new()
+            if UIS:IsKeyDown(Enum.KeyCode.W) then
+                vel = vel + (workspace.CurrentCamera.CFrame.LookVector * speed)
+            end
+            if UIS:IsKeyDown(Enum.KeyCode.S) then
+                vel = vel - (workspace.CurrentCamera.CFrame.LookVector * speed)
+            end
+            if UIS:IsKeyDown(Enum.KeyCode.A) then
+                vel = vel - (workspace.CurrentCamera.CFrame.RightVector * speed)
+            end
+            if UIS:IsKeyDown(Enum.KeyCode.D) then
+                vel = vel + (workspace.CurrentCamera.CFrame.RightVector * speed)
+            end
+            bodyVelocity.velocity = vel
+            bodyGyro.cframe = workspace.CurrentCamera.CFrame
+            wait()
+        end
+    end
+
+    spawn(flyLoop)
+end
+
+function stopFly()
+    flying = false
+    if bodyGyro then bodyGyro:Destroy() end
+    if bodyVelocity then bodyVelocity:Destroy() end
+end
+
+-- Keybind: Fliegen mit Taste "F" an/aus
+UIS.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode.X then
+        if flying then
+            stopFly()
+        else
+            startFly()
+        end
+    end
+end)
+   end,
+})
+
+local Button = Tab:CreateButton({
+   Name = "Noclip (N).",
+   Callback = function()
+   local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local noclip = false
+local connection
+
+local function setNoclip(state)
+    local character = player.Character
+    if not character then return end
+    for _, part in pairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.CanCollide = not state
+        end
+    end
+end
+
+local function enableNoclip()
+    if connection then return end
+    noclip = true
+    connection = RunService.Stepped:Connect(function()
+        setNoclip(true)
+    end)
+end
+
+local function disableNoclip()
+    noclip = false
+    if connection then
+        connection:Disconnect()
+        connection = nil
+    end
+    setNoclip(false)
+end
+
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == Enum.KeyCode.N then
+        if noclip then
+            disableNoclip()
+        else
+            enableNoclip()
+        end
+    end
+end)
+
+-- Optional: Automatisch Noclip deaktivieren beim Respawn
+player.CharacterAdded:Connect(function()
+    disableNoclip()
+end)
+   end,
+})
+
+local Slider = Tab:CreateSlider({
+   Name = "WalkSpeed.",
+   Range = {16, 350},
+   Increment = 1,
+   Suffix = "Speed",
+   CurrentValue = 16,
+   Flag = "sliderjp", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = (Value)
+   end,
+})
+
+local Slider = Tab:CreateSlider({
+   Name = "JumpPower.",
+   Range = {50, 350},
+   Increment = 1,
+   Suffix = "Power",
+   CurrentValue = 50,
+   Flag = "sliderws", -- A flag is the identifier for the configuration file, make sure every element has a different flag if you're using configuration saving to ensure no overlaps
+   Callback = function(Value)
+        game.Players.LocalPlayer.Character.Humanoid.JumpPower = (Value)
+   end,
+})
+
+-- Main-Extra
+local Section = Tab:CreateSection("Extra.")
+
+local Button = Tab:CreateButton({
+   Name = "Sell Inventory.",
+   Callback = function()
+   local args = {
+	workspace:WaitForChild("World"):WaitForChild("NPCs"):WaitForChild("Rocky")
+}
+game:GetService("ReplicatedStorage"):WaitForChild("DialogueRemotes"):WaitForChild("SellAllItems"):FireServer(unpack(args))
+   end,
+})
+
+
+-- AutoFarm
+local Tab = Window:CreateTab("AutoFarm.", "rewind") -- Title, Image
+local Section = Tab:CreateSection("Money.")
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+
+local running = false
+
+local function getCharacter()
+	return player.Character or player.CharacterAdded:Wait()
+end
+
+local function teleportToModel(modelName, offset)
+	local char = getCharacter()
+	local hrp = char:WaitForChild("HumanoidRootPart")
+	local model = workspace.World.NPCs:FindFirstChild(modelName)
+	if model and model.PrimaryPart then
+		hrp.CFrame = model.PrimaryPart.CFrame + offset
+	end
+end
+
+local function waitForBuff(buffName)
+	local buffsFolder = player:WaitForChild("PlayerGui"):WaitForChild("HUD"):WaitForChild("Frame"):WaitForChild("Buffs")
+	while not buffsFolder:FindFirstChild(buffName) and running do
+		local args = { "Pizza Penguin" }
+		ReplicatedStorage:WaitForChild("DialogueRemotes"):WaitForChild("StartInfiniteQuest"):InvokeServer(unpack(args))
+		task.wait(1)
+	end
+end
+
+local function teleportToCustomer()
+	local char = getCharacter()
+	local hrp = char:WaitForChild("HumanoidRootPart")
+
+	local function getTargetPart()
+		local model = workspace:FindFirstChild("Active") and workspace.Active:FindFirstChild("PizzaCustomers"):FindFirstChild("Valued Customer")
+		if model then
+			return model.PrimaryPart or model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("Head")
+		end
+	end
+
+	while running do
+		local part = getTargetPart()
+		if part then
+			hrp.CFrame = part.CFrame + Vector3.new(10, 0, 0)
+			break
+		end
+		task.wait(0.5)
+	end
+end
+
+-- Toggle binding
+local Toggle = Tab:CreateToggle({
+	Name = "Pizza Delivery Auto.",
+	CurrentValue = false,
+	Flag = "Toggle1",
+	Callback = function(Value)
+		running = Value
+
+		if running then
+			task.spawn(function()
+				while running do
+					teleportToModel("Pizza Penguin", Vector3.new(50, -4, 20))
+					task.wait(1)
+					
+					waitForBuff("00Pizza Delivery")
+					task.wait(1)
+					
+					teleportToCustomer()
+					task.wait(1)
+					
+					ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Quest_DeliverPizza"):InvokeServer()
+					task.wait(1)
+					
+					local argsFinish = { "Valued Customer", false }
+					ReplicatedStorage:WaitForChild("DialogueRemotes"):WaitForChild("DialogueFinish"):FireServer(unpack(argsFinish))
+					task.wait(1)
+					
+					teleportToModel("Pizza Penguin", Vector3.new(50, -4, 20))
+					task.wait(1)
+					
+					local argsComplete = { "Pizza Penguin" }
+					ReplicatedStorage:WaitForChild("DialogueRemotes"):WaitForChild("CompleteInfiniteQuest"):InvokeServer(unpack(argsComplete))
+					task.wait(1)
+				end
+			end)
+		end
+	end,
+})
+
+-- Place these at the top of your script, outside the callback!
+local running = false
+local threads = {}
+
+Tab:CreateToggle({
+    Name = "Auto Dig(Position you're Standing on).",
+    Info = "Automates dig actions, no-dig clearing, clicking, and debris/crater cleanup.",
+    CurrentValue = false,
+    Flag = "AutoDig",
+    Callback = function(Value)
+        running = Value
+
+        local Players = game:GetService("Players")
+        local ReplicatedStorage = game:GetService("ReplicatedStorage")
+        local Workspace = game:GetService("Workspace")
+        local VirtualInputManager = game:GetService("VirtualInputManager")
+
+        local player = Players.LocalPlayer
+        local PlayerGui = player:WaitForChild("PlayerGui")
+        local Backpack = player:WaitForChild("Backpack")
+        local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+        local DigFinishedRemote = Remotes:WaitForChild("Dig_Finished")
+        local EquipItemDetectorRemote = Remotes:WaitForChild("Equip_ItemDetector")
+        local NoDigFolder = Workspace:WaitForChild("World"):WaitForChild("Zones"):WaitForChild("_NoDig")
+        local DebrisFolder = Workspace:WaitForChild("Active"):WaitForChild("Debris")
+
+        local args = {
+            0,
+            {
+                {
+                    Orientation = Vector3.new(0, 0, 0),
+                    Transparency = 1,
+                    Name = "PositionPart",
+                    Position = Vector3.new(2841.90185546875, 2.95013427734375, -917.3544921875),
+                    Color = Color3.new(0.6392157077789307, 0.6352941393852234, 0.6470588445663452),
+                    Material = Enum.Material.Plastic,
+                    Shape = Enum.PartType.Block,
+                    Size = Vector3.new(0.1, 0.1, 0.1)
+                }
+            }
+        }
+
+        local function leftClick()
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+            task.wait(0.05)
+            VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+        end
+
+        local function equipFirstInventoryItem()
+            local firstItem = Backpack:GetChildren()[1]
+            if firstItem then
+                EquipItemDetectorRemote:FireServer(firstItem.Name)
+            end
+        end
+
+        local function teleportDigUI()
+            local digGui = PlayerGui:FindFirstChild("Dig")
+            if digGui then
+                local safezone = digGui:FindFirstChild("Safezone")
+                if safezone then
+                    local holder = safezone:FindFirstChild("Holder")
+                    if holder then
+                        local playerBar = holder:FindFirstChild("PlayerBar")
+                        local areaStrong = holder:FindFirstChild("Area_Strong")
+                        if playerBar and areaStrong then
+                            playerBar.Position = areaStrong.Position
+                        end
+                    end
+                end
+            end
+        end
+
+        local firedDigFinished = false
+        local lastDigGuiPresent = false
+
+        local function mainThread()
+            while running do
+                local digGui = PlayerGui:FindFirstChild("Dig")
+                if digGui then
+                    if not lastDigGuiPresent then
+                        equipFirstInventoryItem()
+                        teleportDigUI()
+                        firedDigFinished = false
+                    end
+
+                    if not firedDigFinished then
+                        firedDigFinished = true
+                        task.spawn(function()
+                            task.wait(1)
+                            EquipItemDetectorRemote:FireServer()
+                            DigFinishedRemote:FireServer(unpack(args))
+                            EquipItemDetectorRemote:FireServer()
+                        end)
+                    end
+
+                    leftClick()
+                    task.wait(0.25)
+                else
+                    lastDigGuiPresent = false
+                    task.wait(0.5)
+                end
+                lastDigGuiPresent = digGui ~= nil
+            end
+        end
+
+        local function noDigThread()
+            while running do
+                for _, child in pairs(NoDigFolder:GetChildren()) do
+                    child:Destroy()
+                end
+                task.wait(0.1)
+            end
+        end
+
+        local function mouseClickThread()
+            while running do
+                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 1)
+                task.wait(0.1)
+                VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 1)
+                task.wait(0.4)
+            end
+        end
+
+        local function cleanupThread()
+            while running do
+                -- Delete all Debris_Rock_Active parts
+                for _, part in pairs(DebrisFolder:GetDescendants()) do
+                    if part:IsA("Part") and part.Name == "Debris_Rock_Active" then
+                        part:Destroy()
+                    end
+                end
+
+                -- Delete all models with "Crater" in the name anywhere in Workspace
+                for _, obj in pairs(Workspace:GetDescendants()) do
+                    if obj:IsA("Model") and string.find(obj.Name, "Crater") then
+                        obj:Destroy()
+                    end
+                end
+
+                task.wait(0.25)
+            end
+        end
+
+        if running then
+            threads = threads or {}
+            threads.main = task.spawn(mainThread)
+            threads.noDig = task.spawn(noDigThread)
+            threads.mouse = task.spawn(mouseClickThread)
+            threads.cleanup = task.spawn(cleanupThread)
+        else
+            for name, thread in pairs(threads or {}) do
+                task.cancel(thread)
+                threads[name] = nil
+            end
+        end
+    end
+})
+
+
+
+local Tab = Window:CreateTab("Teleport's.", "rewind") -- Title, Image
+local Section = Tab:CreateSection("Places.")
+
+local Button = Tab:CreateButton({
+   Name = "Spawn(FoxTown).",
+   Callback = function()
+local Players = Game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Char = LocalPlayer.Character
+local Humanoid = Char.HumanoidRootPart
+local target = workspace.Spawns.TeleportSpawns["Fox Town"]
+if Humanoid and target then
+    Humanoid.CFrame = target.CFrame
+end
+   end,
+})
+
+local spawnNames = {
+    "Alona Jungle",
+    "Azure Hollow",
+    "Boss Arena (Molten Monstrosity)",
+    "Cinder Approach",
+    "Cinder Cavern",
+    "Cinder Shores",
+    "Combat Guild",
+    "Copper Mesa",
+    "Everything",
+    "Fernhill Forest",
+    "Glacial Cavern",
+    "Jail Cells",
+    "Monks Workshop",
+    "Mount Charcoal",
+    "Mount Cinder",
+    "NPC (Sydney)",
+    "Penguins Pizza",
+    "Phoenix Tribe",
+    "Rooftop Woodlands",
+    "Saltys Saloon",
+    "Solstice Shrine",
+    "Sovereign Chasm",
+    "Spiders Keep",
+    "The Interlude",
+    "Tom's Bakery",
+    "Verdant Vale",
+    "Volcano"
+}
+
+for _, spawnName in ipairs(spawnNames) do
+    Tab:CreateButton({
+        Name = spawnName .. ".",
+        Callback = function()
+            local Players = game:GetService("Players")
+            local LocalPlayer = Players.LocalPlayer
+            local Char = LocalPlayer.Character
+            if Char and Char:FindFirstChild("HumanoidRootPart") then
+                local Humanoid = Char.HumanoidRootPart
+                local target = workspace.Spawns.TeleportSpawns[spawnName]
+                if target then
+                    Humanoid.CFrame = target.CFrame
+                else
+                    warn("Teleport spawn not found: " .. spawnName)
+                end
+            end
+        end,
+    })
+end
